@@ -4,9 +4,9 @@ function user_inputs()
         #---------------------------------------------------------------------------
         # User define your inputs below: the order doesn't matter
         #---------------------------------------------------------------------------
-        :ode_solver           => SSPRK54(), #ORK256(),#SSPRK33(), #SSPRK33(), #SSPRK54(),
+        :ode_solver           => SSPRK33(), #ORK256(),#SSPRK33(), #SSPRK33(), #SSPRK54(),
         #:Δt                   => 0.02,
-        :Δt                   => 0.4,
+        :Δt                   => 0.2,
         :tinit                => 0.0,
         :tend                 => 1000.0,
         #:tinit                => 100.0,
@@ -27,8 +27,8 @@ function user_inputs()
         # Physical parameters/constants:
         #---------------------------------------------------------------------------
         :lvisc                => true, #false by default NOTICE: works only for Inexact
-        :ivisc_equations      => [1, 2, 3, 4],
-        :μ                   => [0.0, 20.0, 20.0, 60.0], #horizontal viscosity constant for momentum
+        :ivisc_equations      => (1, 2, 3, 4),
+        :μ                   => (0.0, 20.0, 20.0, 60.0), #horizontal viscosity constant for momentum
         #---------------------------------------------------------------------------
         # Mesh paramters and files:
         #---------------------------------------------------------------------------

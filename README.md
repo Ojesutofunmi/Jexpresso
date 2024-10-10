@@ -203,7 +203,6 @@ julia> include("./src/Jexpresso.jl")
 The path would look like 
 ```$JEXPRESSO/problems/equations/PROBLEM_NAME/PROBLEM_CASE_NAME```
 
-
 Example of cloud simulations (please contact us to run this because its branch has not been merged into master yet)
 
 <img src="assets/bomex.png"
@@ -338,10 +337,10 @@ julia> include("./src/Jexpresso.jl")
 
 Test 6: Hydrostatic linear mountain waves
 
-The problem is defined in [`problems/equations/CompEuler/HSmount_Lag_working`](https://github.com/smarras79/Jexpresso/tree/master/problems/equations/CompEuler/HSmount_Lag_working) and by default output will be written to `output/CompEuler/HSmount_Lag_working`. To solve this problem run the following commands from the Julia command line:
+The problem is defined in [`problems/equations/CompEuler/HSmount_Lag`](https://github.com/smarras79/Jexpresso/tree/master/problems/equations/CompEuler/HSmount_Lag) and by default output will be written to `output/CompEuler/HSmount_Lag`. To solve this problem run the following commands from the Julia command line:
 
 ```bash      
-julia> push!(empty!(ARGS), "CompEuler", "HSmount_Lag_working");
+julia> push!(empty!(ARGS), "CompEuler", "HSmount_Lag");
 julia> include("./src/Jexpresso.jl")
 ```
 

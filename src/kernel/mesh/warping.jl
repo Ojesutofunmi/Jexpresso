@@ -29,6 +29,22 @@ function warp_mesh!(mesh,inputs)
       x = mesh.x[ip]
       zsurf[ip] = hc * exp(-(x/ac)^2) * cospi(x/lambdac)^2 
     end
+  elseif (inputs[:mount_type] == "gauss")
+    am = inputs[:a_mount]
+    hm = inputs[:h_mount]
+    xc = inputs[:c_mount]
+    for ip = 1:mesh.npoin
+        x = mesh.x[ip]
+        zsurf[ip] = hm * exp(-((x - xc)^2) / (2 * am^2))
+    end
+   elseif (inputs[:mount_type] == "hillpaper")
+    am = inputs[:a_mount]
+    hm = inputs[:h_mount]
+    xc = inputs[:c_mount]
+    for ip = 1:mesh.npoin
+        x = mesh.x[ip]
+        zsurf[ip] = hm * exp(-((x - xc)^2) / (am))
+    end
   end
 
   for ip = 1:mesh.npoin

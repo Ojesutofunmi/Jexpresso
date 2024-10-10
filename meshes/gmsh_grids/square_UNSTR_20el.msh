@@ -6,7 +6,7 @@ $PhysicalNames
 0 1 "boundary"
 1 2 "free_slip"
 2 3 "domain"
-$EndPhysicalNames
+$EnhysicalNames
 $Entities
 4 4 1 0
 1 -5000 0 500 1 1 

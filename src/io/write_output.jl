@@ -136,7 +136,7 @@ end
 #
 function write_output(SD, sol::ODESolution, mesh::St_mesh, OUTPUT_DIR::String, inputs::Dict, varnames, outformat::VTK; nvar=1, qexact=zeros(1,nvar), case="")
  
-    #println(string(" # Writing output to VTK file:", OUTPUT_DIR, "*.vtu ...  ") )
+    println(string(" # Writing output to VTK file:", OUTPUT_DIR, "*.vtu ...  ") )
     
     for iout = 1:size(sol.t[:],1)
         if (inputs[:backend] == CPU())
@@ -173,8 +173,8 @@ function write_output(SD, u, t, iout, mesh::St_mesh, OUTPUT_DIR::String, inputs:
 
     end
 
-    println(string(" # writing ", OUTPUT_DIR, "/iter", iout, ".vtu at t=", t, " s... DONE") )
-
+    println(string(" # writing ", OUTPUT_DIR, "/iter", iout, ".vtu at t=", t, " s... DONE",inputs[:loutput_pert]) )
+    
 end
 
 # PNG 2D

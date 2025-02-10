@@ -46,99 +46,66 @@ function initialize(SD::NSD_3D, PT, mesh::St_mesh, inputs::Dict, OUTPUT_DIR::Str
             zc = 2000.0 #m
         
             θc   =   3.0 #K
-            rx = 10000.0
+            qvc = 2e-3
+            rx = 2400.0
             rz = 1500.0
             data = read_sounding(inputs[:sounding_file])
             background = interpolate_sounding(inputs[:backend],mesh.npoin,mesh.z,data) 
             balanced = zeros(mesh.npoin,1)
-            #rebalance hydrostatic state
-            diff = 100000.0
-            niter = 0
-            #=while (diff > 0.1 && niter < 50)
-                for e=1:mesh.nelem
-                    for i=1:mesh.ngl
-                        for j=1:mesh.ngl
-                            for k=1:mesh.ngl
-                                ip = mesh.connijk[e,i,j,k]
-                                if (k < mesh.ngl)
-                                    ip1 = mesh.connijk[e,i,j,k+1]
-                                else
-                                    ip1 = mesh.connijk[e,i,j,k-1]
-                                end
-                                if (k > 1 && k < mesh.ngl)
-                                    ip2 = mesh.connijk[e,i,j,k-1]
-                                    dz = (abs(mesh.z[ip] - mesh.z[ip1]) + abs(mesh.z[ip] -mesh.z[ip2]))/2
-                                    balanced[ip] = abs((-2*background[ip,5] + background[ip2,5] + background[ip1,5]))/(2*dz*PhysConst.g)
-                                else
-                                    if (balanced[ip] == 0)
-                                        balanced[ip] = abs(background[ip,5] - background[ip1,5])/(PhysConst.g *abs(mesh.z[ip]-mesh.z[ip1]))
-                                    else
-                                        balanced[ip] = (abs(background[ip,5] - background[ip1,5])/(PhysConst.g *abs(mesh.z[ip]-mesh.z[ip1])) + balanced[ip])/2
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-                @info maximum(balanced), minimum(balanced)
-                for ip=1:mesh.nelem
-                    if (mesh.z[ip] < 24000.0 -1)
-                    T = background[ip,1] / (PhysConst.pref/background[ip,5])^(PhysConst.Rair/PhysConst.cp)
-                    old = background[ip,5]
-                    background[ip,5] = balanced[ip]*PhysConst.Rair*T
-                    if (ip ==1)
-                        diff = abs(background[ip,5] - old)/old
-                    else
-                        diff = max(abs(background[ip,5] - old)/old,diff)
-                    end
-                    end
-                end
-                @info maximum(background[:,5]), minimum(background[:,5]), diff
-                niter += 1
-            end
-            @info diff=#
+            @info minimum(background[:,3]), maximum(background[:,3])           
             for ip = 1:mesh.npoin
             
                 x, y, z = mesh.x[ip], mesh.y[ip], mesh.z[ip]
+                 
+                r = sqrt( (x - xc)^2/(rx)^2 )
             
-                r = sqrt( (x - xc)^2/(rx^2) + (z - zc)^2/(rz^2) )
-            
-                Δθ = 0.0 #K
-                if r <= 1
-                    Δθ = θc*cospi(r/2)^2
+                ΔT = 0.0 #K
+                Δqv = 0.0
+                if (r <= 1) && (z <= 1199.0) && (z>= 350.0)
+                    ΔT = θc*sinpi((r+1)/2)/((z-200)/200)
+                    Δqv = qvc*sinpi((r+1)/2)/((z-200)/200) 
                 end
-                θ_ref = background[ip,1]
-                #if (z>=8000)
-                #    qv_ref = background[ip,2]/1000*exp(-(z-8000)/10000)
-                #else
+                T_ref = background[ip,1]
                 qv_ref = background[ip,2]/1000
-                #end
                 u_ref = background[ip,3]
                 v_ref = background[ip,4]
                 pref = background[ip,5]
-                θ_ref2 = θ_ref/(1+0.61*qv_ref)
-                θ1 = θ_ref + Δθ
-                θ2 = θ_ref2 + Δθ
-                Tref = θ_ref / (PhysConst.pref/pref)^(PhysConst.Rair/PhysConst.cp)
-                T = θ1 / (PhysConst.pref/pref)^(PhysConst.Rair/PhysConst.cp)
-                Tv = T*(1+0.61*qv_ref) 
-                Tv_ref = Tref*(1+0.61*qv_ref) 
+                T = T_ref + ΔT
+                qv = qv_ref + Δqv
+                #=θ_ref = T_ref * (PhysConst.pref/pref)^(PhysConst.Rair/PhysConst.cp)
+                θ = T * (PhysConst.pref/pref)^(PhysConst.Rair/PhysConst.cp)
+                θv_ref = θ_ref*(1 + 0.61*qv_ref)
+                θv = θ*(1 + 0.61*qv)=#
+                Tv = T*(1 + 0.61*qv)
+                Tv_ref = T_ref*(1 + 0.61*qv_ref)
                 ρ    = perfectGasLaw_TPtoρ(PhysConst; Temp=Tv,    Press=pref)    #kg/m³
                 ρref = perfectGasLaw_TPtoρ(PhysConst; Temp=Tv_ref, Press=pref) #kg/m³
                 hl = PhysConst.cp*T + PhysConst.g*z
-                hl_ref = PhysConst.cp*Tref + PhysConst.g*z
+                hl_ref = PhysConst.cp*T_ref + PhysConst.g*z
                 u = u_ref
                 v = v_ref
                 w = 0.0
-                pref_m = ρref*Tv_ref*PhysConst.Rair#ρref*PhysConst.Rair*Tref + ρref*qv_ref*PhysConst.Rvap*Tref
-            
+                pref_m = ρref*Tv_ref*PhysConst.Rair#ρref*PhysConst.Rair*T_ref + ρref*qv_ref*PhysConst.Rvap*T_ref
+                p_m = ρ*PhysConst.Rair*T + ρ*qv_ref*PhysConst.Rvap*T
+                ##attempt to assure balance
+                #=for iter=1:10
+                    θ_ref = T_ref * (PhysConst.pref/p_m)^(PhysConst.Rair/PhysConst.cp)
+                    θ = T * (PhysConst.pref/pref_m)^(PhysConst.Rair/PhysConst.cp)
+                    θv_ref = θ_ref*(1 + 0.61*qv_ref)
+                    θv = θ*(1 + 0.61*qv)
+                    ρ    = perfectGasLaw_θPtoρ(PhysConst; θ=θv,    Press=p_m)    #kg/m³
+                    ρref = perfectGasLaw_θPtoρ(PhysConst; θ=θv_ref, Press=pref_m)
+                    pref_m = ρref*PhysConst.Rair*T_ref + ρref*qv_ref*PhysConst.Rvap*T_ref
+                    p_m = ρ*PhysConst.Rair*T + ρ*qv_ref*PhysConst.Rvap*T
+                    #@info θ_ref, θv_ref, ρref, pref_m
+                end=#
                 if inputs[:SOL_VARS_TYPE] == PERT()
                     q.qn[ip,1] = ρ - ρref
                     q.qn[ip,2] = ρ*u - ρref*u
                     q.qn[ip,3] = ρ*v - ρref*v
                     q.qn[ip,4] = ρ*w - ρref*w
                     q.qn[ip,5] = ρ*hl - ρref*hl_ref#ρ*θ - ρref*θref
-                    q.qn[ip,6] = ρ*qv_ref-ρref*qv_ref
+                    q.qn[ip,6] = ρ*qv-ρref*qv_ref
                     q.qn[ip,7] = 0.0
                     q.qn[ip,end] = pref_m #+ ρ*qv_ref*PhysConst.Rvap*T
 
@@ -175,7 +142,7 @@ function initialize(SD::NSD_3D, PT, mesh::St_mesh, inputs::Dict, OUTPUT_DIR::Str
                 #end
             end
         end
-    
+        @info maximum(q.qn[:,end]), minimum(q.qn[:,end]), maximum(q.qn[:,2]), minimum(q.qn[:,2]), maximum(q.qn[:,6]), minimum(q.qn[:,6]), maximum(q.qn[:,1]), minimum(q.qn[:,1])    
         if inputs[:CL] == NCL()
             if inputs[:SOL_VARS_TYPE] == PERT()
                 q.qn[:,2] .= q.qn[:,2]./(q.qn[:,1] + q.qe[:,1])

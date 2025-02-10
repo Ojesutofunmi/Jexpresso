@@ -54,49 +54,7 @@ function initialize(SD::NSD_3D, PT, mesh::St_mesh, inputs::Dict, OUTPUT_DIR::Str
             #rebalance hydrostatic state
             diff = 100000.0
             niter = 0
-            #=while (diff > 0.1 && niter < 50)
-                for e=1:mesh.nelem
-                    for i=1:mesh.ngl
-                        for j=1:mesh.ngl
-                            for k=1:mesh.ngl
-                                ip = mesh.connijk[e,i,j,k]
-                                if (k < mesh.ngl)
-                                    ip1 = mesh.connijk[e,i,j,k+1]
-                                else
-                                    ip1 = mesh.connijk[e,i,j,k-1]
-                                end
-                                if (k > 1 && k < mesh.ngl)
-                                    ip2 = mesh.connijk[e,i,j,k-1]
-                                    dz = (abs(mesh.z[ip] - mesh.z[ip1]) + abs(mesh.z[ip] -mesh.z[ip2]))/2
-                                    balanced[ip] = abs((-2*background[ip,5] + background[ip2,5] + background[ip1,5]))/(2*dz*PhysConst.g)
-                                else
-                                    if (balanced[ip] == 0)
-                                        balanced[ip] = abs(background[ip,5] - background[ip1,5])/(PhysConst.g *abs(mesh.z[ip]-mesh.z[ip1]))
-                                    else
-                                        balanced[ip] = (abs(background[ip,5] - background[ip1,5])/(PhysConst.g *abs(mesh.z[ip]-mesh.z[ip1])) + balanced[ip])/2
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-                @info maximum(balanced), minimum(balanced)
-                for ip=1:mesh.nelem
-                    if (mesh.z[ip] < 24000.0 -1)
-                    T = background[ip,1] / (PhysConst.pref/background[ip,5])^(PhysConst.Rair/PhysConst.cp)
-                    old = background[ip,5]
-                    background[ip,5] = balanced[ip]*PhysConst.Rair*T
-                    if (ip ==1)
-                        diff = abs(background[ip,5] - old)/old
-                    else
-                        diff = max(abs(background[ip,5] - old)/old,diff)
-                    end
-                    end
-                end
-                @info maximum(background[:,5]), minimum(background[:,5]), diff
-                niter += 1
-            end
-            @info diff=#
+            
             for ip = 1:mesh.npoin
             
                 x, y, z = mesh.x[ip], mesh.y[ip], mesh.z[ip]
@@ -108,29 +66,24 @@ function initialize(SD::NSD_3D, PT, mesh::St_mesh, inputs::Dict, OUTPUT_DIR::Str
                     Δθ = θc*cospi(r/2)^2
                 end
                 θ_ref = background[ip,1]
-                #if (z>=8000)
-                #    qv_ref = background[ip,2]/1000*exp(-(z-8000)/10000)
-                #else
                 qv_ref = background[ip,2]/1000
-                #end
                 u_ref = background[ip,3]
                 v_ref = background[ip,4]
                 pref = background[ip,5]
-                θ_ref2 = θ_ref/(1+0.61*qv_ref)
-                θ1 = θ_ref + Δθ
-                θ2 = θ_ref2 + Δθ
+                θv_ref = θ_ref*(1 + 0.608*qv_ref)
+                θ = θ_ref + Δθ
+                θv = θv_ref + Δθ
+                p    = PhysConst.pref*(1.0 - PhysConst.g*z/(PhysConst.cp*θv))^(PhysConst.cpoverR) #Pa
                 Tref = θ_ref / (PhysConst.pref/pref)^(PhysConst.Rair/PhysConst.cp)
-                T = θ1 / (PhysConst.pref/pref)^(PhysConst.Rair/PhysConst.cp)
-                Tv = T*(1+0.61*qv_ref) 
-                Tv_ref = Tref*(1+0.61*qv_ref) 
-                ρ    = perfectGasLaw_TPtoρ(PhysConst; Temp=Tv,    Press=pref)    #kg/m³
-                ρref = perfectGasLaw_TPtoρ(PhysConst; Temp=Tv_ref, Press=pref) #kg/m³
+                T = θ / (PhysConst.pref/pref)^(PhysConst.Rair/PhysConst.cp)
+                ρ    = perfectGasLaw_θPtoρ(PhysConst; θ=θv,    Press=pref)    #kg/m³
+                ρref = perfectGasLaw_θPtoρ(PhysConst; θ=θv_ref, Press=pref) #kg/m³
                 hl = PhysConst.cp*T + PhysConst.g*z
                 hl_ref = PhysConst.cp*Tref + PhysConst.g*z
                 u = u_ref
                 v = v_ref
                 w = 0.0
-                pref_m = ρref*Tv_ref*PhysConst.Rair#ρref*PhysConst.Rair*Tref + ρref*qv_ref*PhysConst.Rvap*Tref
+                pref_m = ρref*PhysConst.Rair*Tref + ρref*qv_ref*PhysConst.Rvap*Tref
             
                 if inputs[:SOL_VARS_TYPE] == PERT()
                     q.qn[ip,1] = ρ - ρref
